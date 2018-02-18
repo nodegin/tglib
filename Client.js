@@ -12,6 +12,10 @@ class Client {
       apiHash: null,
       binaryPath: 'libtdjson',
       verbosityLevel: 2,
+      device_model: 'tdtest',
+      system_version: 'node',
+      application_version: '1.0',
+      system_language_code: 'en',
     }
     this.options = {
       ...defaultOptions,
@@ -95,10 +99,10 @@ class Client {
             'use_secret_chats': false,
             'api_id': this.options.apiId,
             'api_hash': this.options.apiHash,
-            'system_language_code': 'en',
-            'application_version': '1.0',
-            'device_model': 'tdtest',
-            'system_version': 'node',
+            'system_language_code': this.options.system_language_code,
+            'application_version': this.options.application_version,
+            'device_model': this.options.device_model,
+            'system_version': this.options.system_version,
             'enable_storage_optimizer': true,
           },
         })
