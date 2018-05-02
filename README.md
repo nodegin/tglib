@@ -114,6 +114,7 @@ await client.sendMessageTypeText('123456789', 'Hello *World*', {
 ### Requirements
 
 - TDLib binary
+> If you planning to build TDLib for Windows, please see [here](https://github.com/c0re100/F9TelegramUtils#compile-tdlib-on-windows) for more information.
 - Node.js 10 preferred (minimum >= 9.0.0)
 > Note: If you are using Node.js 9.x, you may encounter a warning message `Warning: N-API is an experimental feature and could change at any time.`, this can be suppressed by upgrading to version 10.
 
