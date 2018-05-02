@@ -2,6 +2,8 @@ const uuidv4 = require('uuid/v4')
 const ffi = require('ffi-napi')
 const ref = require('ref-napi')
 const path = require('path')
+const TG = require('./TG')
+const { InvalidEventError, ClientCreateError, ClientNotCreatedError } = require('./Errors')
 
 const { buildQuery, getInput, emptyFunction } = require('./utils')
 
@@ -17,7 +19,7 @@ class Client {
         'use_secret_chats': false,
         'system_language_code': 'en',
         'application_version': '1.0',
-        'device_model': 'tdtest',
+        'device_model': 'tglib',
         'system_version': 'node',
         'enable_storage_optimizer': true,
       },
@@ -26,44 +28,50 @@ class Client {
       ...defaultOptions,
       ...options,
     }
-    this.tdlib = ffi.Library(
-      path.resolve(process.cwd(), this.options.binaryPath),
-      {
-        'td_json_client_create' :     [ref.refType('void'), []],
-        'td_json_client_send'   :     [ref.types.void     , [ref.refType('void'), ref.types.CString]],
-        'td_json_client_receive':     [ref.types.CString  , [ref.refType('void'), ref.types.double]],
-        'td_json_client_execute':     [ref.types.CString  , [ref.refType('void'), ref.types.CString]],
-        'td_json_client_destroy':     [ref.types.void     , [ref.refType('void')]],
-        'td_set_log_verbosity_level': [ref.types.void     , [ref.types.int]],
-      }
-    )
-    this.connect = () => new Promise((resolve, reject) => {
-      this.resolver = resolve
-      this.rejector = reject
-    })
+    const connectPromise = new Promise((resolve) => { this.resolver = resolve })
+    this.connect = () => connectPromise
+    this.client = null
+    this.tg = null
+    this.fetching = {}
     this.listeners = {
       '_update': emptyFunction,
       '_error': emptyFunction,
     }
-    this.fetching = {}
     this.init()
   }
 
   async init() {
     try {
+      this.tdlib = ffi.Library(
+        path.resolve(process.cwd(), this.options.binaryPath),
+        {
+          'td_json_client_create'          : ['pointer', []],
+          'td_json_client_send'            : ['void'   , ['pointer', 'string']],
+          'td_json_client_receive'         : ['string' , ['pointer', 'double']],
+          'td_json_client_execute'         : ['string' , ['pointer', 'string']],
+          'td_json_client_destroy'         : ['void'   , ['pointer']],
+          'td_set_log_file_path'           : ['int'    , ['string']],
+          'td_set_log_verbosity_level'     : ['void'   , ['int']],
+          'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
+        }
+      )
+      this.tdlib.td_set_log_file_path(path.resolve(process.cwd(), '_td_logs.txt'))
       this.tdlib.td_set_log_verbosity_level(this.options.verbosityLevel)
+      this.tdlib.td_set_log_fatal_error_callback(ffi.Callback('void', ['string'], (message) => {
+        console.error('TDLib Fatal Error:', message)
+      }))
       this.client = await this._create()
+      this.tg = new TG(this)
       this.loop()
     } catch (error) {
-      this.rejector(`Error while creating client: ${error}`)
+      throw new ClientCreateError(error)
     }
   }
 
   on(eventName, listener) {
     const validNames = Object.keys(this.listeners)
     if (validNames.indexOf(eventName) < 0) {
-      throw new Error(`Invalid event name "${eventName}".`)
-      return
+      throw new InvalidEventError(eventName)
     }
     this.listeners[eventName] = listener
   }
@@ -71,7 +79,6 @@ class Client {
   async loop() {
     const update = await this._receive()
     if (!update) {
-      console.log('Current update is empty.')
       return this.loop()
     }
     switch (update['@type']) {
@@ -176,8 +183,18 @@ class Client {
       delete update['@extra']
       this.fetching[id](update)
       delete this.fetching[id]
-    } else {
-      this.listeners['_update'].call(null, update)
+      return
+    }
+    switch (update['@type']) {
+      case 'updateOption': {
+        if (update['name'] === 'my_id' && update['value']['@type'] === 'optionValueEmpty') {
+          // session has been signed out
+          await this._destroy()
+          break
+        }
+      }
+      default:
+        this.listeners['_update'].call(null, update)
     }
   }
 
@@ -186,11 +203,11 @@ class Client {
     query['@extra'] = id
     const receiveUpdate = new Promise((resolve, reject) => {
       this.fetching[id] = resolve
-      // timeout after 10 seconds
+      // timeout after 29 seconds
       setTimeout(() => {
         delete this.fetching[id]
-        reject('Query timed out after 10 seconds.')
-      }, 1000 * 10)
+        reject('Query timed out after 29 seconds.')
+      }, 1000 * 29)
     })
     await this._send(query)
     const result = await receiveUpdate
@@ -210,6 +227,9 @@ class Client {
 
   _send(query) {
     return new Promise((resolve, reject) => {
+      if (!this.client) {
+        return reject(new ClientNotCreatedError)
+      }
       this.tdlib.td_json_client_send.async(this.client, buildQuery(query), (err, response) => {
         if (err) {
           return reject(err)
@@ -224,6 +244,9 @@ class Client {
 
   _receive(timeout = 10) {
     return new Promise((resolve, reject) => {
+      if (!this.client) {
+        return reject(new ClientNotCreatedError)
+      }
       this.tdlib.td_json_client_receive.async(this.client, timeout, (err, response) => {
         if (err) {
           return reject(err)
@@ -238,6 +261,9 @@ class Client {
 
   _execute(query) {
     return new Promise((resolve, reject) => {
+      if (!this.client) {
+        return reject(new ClientNotCreatedError)
+      }
       try {
         const response = this.tdlib.td_json_client_execute(this.client, buildQuery(query))
         if (!response) {
@@ -252,8 +278,10 @@ class Client {
 
   _destroy() {
     return new Promise((resolve) => {
-      this.tdlib.td_json_client_destroy(this.client)
-      this.client = null
+      if (this.client) {
+        this.tdlib.td_json_client_destroy(this.client)
+        this.client = null
+      }
       resolve()
     })
   }

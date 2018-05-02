@@ -95,7 +95,19 @@ const chats = await client.fetch({
 
 #### ![](https://placehold.it/12/3abc64/000?text=+) High Level APIs
 
-WIP
+tglib provides a collection of APIs that designed for ease of use and handiness. These APIs are located under `client.tg` property.
+
+##### `client.tg.sendMessageTypeText(chatId, text, options = {})` -> Promise -> Void
+
+This API is provided by tglib, you can use this API to send message to a chat. If the `options` argument is specified, the function will combine your options with its default.
+
+```js
+await client.sendMessageTypeText('123456789', 'Hello *World*', {
+  'parse_mode': 'markdown',
+  'disable_notification': true,
+  'clear_draft': false,
+})
+```
 
 -----
 

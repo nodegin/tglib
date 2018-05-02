@@ -1,3 +1,4 @@
 const Client = require('./Client')
+const Errors = require('./Errors')
 
-module.exports = { Client }
+module.exports = { Client, Errors }
