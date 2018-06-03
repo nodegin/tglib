@@ -1,10 +1,12 @@
-const uuidv4 = require('uuid/v4')
+const { crc32 } = require('crc')
 const ffi = require('ffi-napi')
 const ref = require('ref-napi')
+const fs = require('fs-extra')
 const path = require('path')
-const TG = require('./TG')
-const { InvalidEventError, ClientCreateError, ClientNotCreatedError } = require('./Errors')
 
+const TG = require('./TG')
+const { version: appVersion } = require('./package.json')
+const { InvalidEventError, ClientCreateError, ClientNotCreatedError, ClientFetchError } = require('./Errors')
 const { buildQuery, getInput, emptyFunction } = require('./utils')
 
 class Client {
@@ -12,6 +14,7 @@ class Client {
     const defaultOptions = {
       apiId: null,
       apiHash: null,
+      auth: {},
       binaryPath: 'libtdjson',
       verbosityLevel: 2,
       tdlibParameters: {
@@ -20,7 +23,7 @@ class Client {
         'system_language_code': 'en',
         'application_version': '1.0',
         'device_model': 'tglib',
-        'system_version': 'node',
+        'system_version': appVersion,
         'enable_storage_optimizer': true,
       },
     }
@@ -28,8 +31,10 @@ class Client {
       ...defaultOptions,
       ...options,
     }
-    const connectPromise = new Promise((resolve) => { this.resolver = resolve })
-    this.connect = () => connectPromise
+    this.ready = new Promise((resolve) => {
+      // Add some delay to allow telegram get ready. (Issue #20)
+      this.resolver = () => setTimeout(resolve, 500)
+    })
     this.client = null
     this.tg = null
     this.fetching = {}
@@ -42,8 +47,17 @@ class Client {
 
   async init() {
     try {
+      const {
+        auth: { type, value },
+        binaryPath,
+        verbosityLevel,
+      } = this.options
+
+      this.appDir = path.resolve(process.cwd(), '__tglib__', crc32(`${type}${value}`).toString())
+      await fs.ensureDir(this.appDir)
+
       this.tdlib = ffi.Library(
-        path.resolve(process.cwd(), this.options.binaryPath),
+        path.resolve(process.cwd(), binaryPath),
         {
           'td_json_client_create'          : ['pointer', []],
           'td_json_client_send'            : ['void'   , ['pointer', 'string']],
@@ -55,11 +69,12 @@ class Client {
           'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
         }
       )
-      this.tdlib.td_set_log_file_path(path.resolve(process.cwd(), '_td_logs.txt'))
-      this.tdlib.td_set_log_verbosity_level(this.options.verbosityLevel)
+      this.tdlib.td_set_log_file_path(path.resolve(this.appDir, 'logs.txt'))
+      this.tdlib.td_set_log_verbosity_level(verbosityLevel)
       this.tdlib.td_set_log_fatal_error_callback(ffi.Callback('void', ['string'], (message) => {
         console.error('TDLib Fatal Error:', message)
       }))
+
       this.client = await this._create()
       this.tg = new TG(this)
       this.loop()
@@ -100,55 +115,54 @@ class Client {
   async handleAuth(update) {
     switch (update['authorization_state']['@type']) {
       case 'authorizationStateWaitTdlibParameters': {
-        await this._send({
+        return this._send({
           '@type': 'setTdlibParameters',
           'parameters': {
             ...this.options.tdlibParameters,
             '@type': 'tdlibParameters',
-            'database_directory': path.resolve(process.cwd(), '_td_database'),
-            'files_directory': path.resolve(process.cwd(), '_td_files'),
+            'database_directory': path.resolve(this.appDir, 'database'),
+            'files_directory': path.resolve(this.appDir, 'files'),
             'api_id': this.options.apiId,
             'api_hash': this.options.apiHash,
           },
         })
-        break
       }
       case 'authorizationStateWaitEncryptionKey': {
-        await this._send({
+        return this._send({
           '@type': 'checkDatabaseEncryptionKey',
         })
-        break
       }
       case 'authorizationStateWaitPhoneNumber': {
-        await this._send({
-          '@type': 'setAuthenticationPhoneNumber',
-          'phone_number': this.options.phoneNumber,
-        })
-        break
+        const { auth: { type, value } } = this.options
+        return type === 'user' ? (
+          this._send({
+            '@type': 'setAuthenticationPhoneNumber',
+            'phone_number': value,
+          })
+        ) : (
+          this._send({
+            '@type': 'checkAuthenticationBotToken',
+            'token': value,
+          })
+        )
       }
       case 'authorizationStateWaitCode': {
         const code = await getInput('input', 'Please enter auth code: ')
-        await this._send({
+        return this._send({
           '@type': 'checkAuthenticationCode',
           'code': code,
         })
-        break
       }
       case 'authorizationStateWaitPassword': {
         const passwordHint = update['authorization_state']['password_hint']
         const password = await getInput('password', `Please enter password (${passwordHint}): `)
-        await this._send({
+        return this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
         })
-        break
       }
-      case 'authorizationStateReady': {
-        this.resolver()
-        break
-      }
-      default:
-        break
+      case 'authorizationStateReady':
+        return this.resolver()
     }
   }
 
@@ -161,7 +175,7 @@ class Client {
           '@type': 'checkAuthenticationCode',
           'code': code,
         })
-        break
+        return
       }
       case 'PASSWORD_HASH_INVALID': {
         const password = await getInput('password', `Wrong password, please re-enter: `)
@@ -169,19 +183,24 @@ class Client {
           '@type': 'checkAuthenticationPassword',
           'password': password,
         })
-        break
+        return
       }
-      default:
-        this.listeners['_error'].call(null, update)
-        break
     }
+    const id = update['@extra']
+    if (this.fetching[id]) {
+      delete update['@extra']
+      this.fetching[id].reject(new ClientFetchError(update))
+      delete this.fetching[id]
+      return
+    }
+    this.listeners['_error'].call(null, update)
   }
 
   async handleUpdate(update) {
     const id = update['@extra']
     if (this.fetching[id]) {
       delete update['@extra']
-      this.fetching[id](update)
+      this.fetching[id].resolve(update)
       delete this.fetching[id]
       return
     }
@@ -199,10 +218,10 @@ class Client {
   }
 
   async fetch(query) {
-    const id = uuidv4()
+    const id = crc32(Math.random().toString()).toString()
     query['@extra'] = id
     const receiveUpdate = new Promise((resolve, reject) => {
-      this.fetching[id] = resolve
+      this.fetching[id] = { resolve, reject }
       // timeout after 29 seconds
       setTimeout(() => {
         delete this.fetching[id]

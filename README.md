@@ -2,6 +2,8 @@
 
 TDLib (Telegram Database library) bindings for Node.js
 
+[![npm](https://img.shields.io/npm/v/tglib.svg)](https://www.npmjs.com/package/tglib)
+
 -----
 
 ### Getting started
@@ -15,23 +17,40 @@ TDLib (Telegram Database library) bindings for Node.js
 
 tglib provide some useful methods that makes your Telegram app development easier.
 
+#### Authorizing an user
+
 ```js
 const client = new Client({
   apiId: 'YOUR_API_ID',
   apiHash: 'YOUR_API_HASH',
-  phoneNumber: 'YOUR_PHONE_NUMBER',
+  credentials: {
+    type: 'user',
+    value: 'YOUR_PHONE_NUMBER',
+  },
 })
 ```
 
+#### Authorizing a bot
+
+```js
+const client = new Client({
+  apiId: 'YOUR_API_ID',
+  apiHash: 'YOUR_API_HASH',
+  credentials: {
+    type: 'bot',
+    value: 'YOUR_BOT_TOKEN',
+  },
+})
+```
 
 #### ![](https://placehold.it/12/efcf39/000?text=+) Low Level APIs
 
-##### `client.connect()` -> Promise -> Void
+##### `client.ready` -> Promise
 
-This API is provided by tglib, you can use this API to initialize and connect your client with Telegram.
+This promise is used for initializing tglib client and connect with Telegram.
 
 ```js
-await client.connect()
+await client.ready
 ```
 
 ##### `client.on(event, callback)` -> Void

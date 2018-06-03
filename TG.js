@@ -14,7 +14,10 @@ class TG {
     this.client = client
   }
 
-  async sendMessageTypeText(chatId, text, options = {}) {
+  /*
+   *  Sends text message to a existing chat.
+   */
+  async sendTextMessage(chatId, text, options = {}) {
     let formattedText
     switch (options.parse_mode) {
       case 'html':
@@ -54,7 +57,7 @@ class TG {
       },
     }
     combine(payload, options)
-    await this.client._send(payload)
+    return this.client.fetch(payload)
   }
 }
 

@@ -1,13 +1,16 @@
 const { Client } = require('tglib')
 
-async function main() {
+void async function() {
   const client = new Client({
     apiId: 'YOUR_API_ID',
     apiHash: 'YOUR_API_HASH',
-    phoneNumber: 'YOUR_PHONE_NUMBER',
+    auth: {
+      type: 'user',
+      value: 'YOUR_PHONE_NUMBER',
+    },
   })
 
-  await client.connect()
+  await client.ready
 
   const result = await client.fetch({
     '@type': 'getChats',
@@ -18,6 +21,4 @@ async function main() {
 
   // latest 100 chats will be returned
   console.log(result)
-}
-
-main()
+}()
