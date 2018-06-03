@@ -45,7 +45,9 @@ const client = new Client({
 
 #### ![](https://placehold.it/12/efcf39/000?text=+) Low Level APIs
 
-##### `client.ready` -> Promise
+
+##### `client.ready`
+
 
 This promise is used for initializing tglib client and connect with Telegram.
 
@@ -53,7 +55,13 @@ This promise is used for initializing tglib client and connect with Telegram.
 await client.ready
 ```
 
+
 ##### `client.on(event, callback)` -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by tglib, you can use this API to attach an event listener for iterating updates.
 
@@ -61,8 +69,16 @@ This API is provided by tglib, you can use this API to attach an event listener 
 client.on('_update', console.log.bind(console))
 client.on('_error', console.error.bind(console))
 ```
+</p>
+</details>
+
 
 ##### `client._send(query)` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by TDLib, you can use this API to send asynchronous message to Telegram.
 
@@ -79,8 +95,16 @@ await client._send({
   },
 })
 ```
+</p>
+</details>
+
 
 ##### `client._execute(query)` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by TDLib, you can use this API to execute synchronous action to Telegram.
 
@@ -90,16 +114,32 @@ await client._execute({
   'text': '@telegram /test_command https://telegram.org telegram.me',
 })
 ```
+</p>
+</details>
+
 
 ##### `client._destroy()` -> Promise -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by TDLib, you can use this API to destroy the client.
 
 ```js
 await client._destroy()
 ```
+</p>
+</details>
+
 
 ##### `client.fetch(query)` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by tglib, you can use this API to send asynchronous message to Telegram and receive response.
 
@@ -111,12 +151,22 @@ const chats = await client.fetch({
   'limit': 100,
 })
 ```
+</p>
+</details>
+
 
 #### ![](https://placehold.it/12/3abc64/000?text=+) High Level APIs
 
+
 tglib provides a collection of APIs that designed for ease of use and handiness. These APIs are located under `client.tg` property.
 
+
 ##### `client.tg.sendTextMessage(chatId, text, options = {})` -> Promise -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
 
 This API is provided by tglib, you can use this API to send message to a chat. If the `options` argument is specified, the function will combine your options with its default.
 
@@ -127,6 +177,8 @@ await client.sendTextMessage('123456789', 'Hello *World*', {
   'clear_draft': false,
 })
 ```
+</p>
+</details>
 
 -----
 
