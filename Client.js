@@ -129,7 +129,7 @@ class Client {
         break
       }
       case 'authorizationStateWaitCode': {
-        const code = await getInput('input', 'Please enter auth code: ')
+        const code = await getInput('input', `[${this.options.phoneNumber}] Please enter auth code: `)
         await this._send({
           '@type': 'checkAuthenticationCode',
           'code': code,
@@ -138,7 +138,10 @@ class Client {
       }
       case 'authorizationStateWaitPassword': {
         const passwordHint = update['authorization_state']['password_hint']
-        const password = await getInput('password', `Please enter password (${passwordHint}): `)
+        const password = await getInput(
+            'password',
+            `[${this.options.phoneNumber}] Please enter password (${passwordHint}): `
+        )
         await this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
@@ -158,7 +161,7 @@ class Client {
     switch (update['message']) {
       case 'PHONE_CODE_EMPTY':
       case 'PHONE_CODE_INVALID': {
-        const code = await getInput('input', 'Wrong auth code, please re-enter: ')
+        const code = await getInput('input', `[${this.options.phoneNumber}] Wrong auth code, please re-enter: `)
         await this._send({
           '@type': 'checkAuthenticationCode',
           'code': code,
@@ -166,7 +169,7 @@ class Client {
         break
       }
       case 'PASSWORD_HASH_INVALID': {
-        const password = await getInput('password', `Wrong password, please re-enter: `)
+        const password = await getInput('password', `[${this.options.phoneNumber}] Wrong password, please re-enter: `)
         await this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
