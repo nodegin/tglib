@@ -5,9 +5,7 @@ const path = require('path')
 const TG = require('./TG')
 const { InvalidEventError, ClientCreateError, ClientNotCreatedError } = require('./Errors')
 
-const { buildQuery, getInput, emptyFunction } = require('./utils')
-
-const tdLibWD = path.resolve(process.cwd(), '.td')
+const { buildQuery, getInput, emptyFunction, ensureDir } = require('./utils')
 
 class Client {
   constructor(options = {}) {
@@ -15,6 +13,7 @@ class Client {
       apiId: null,
       apiHash: null,
       binaryPath: 'libtdjson',
+      workingDirectoryPath: '.td',
       verbosityLevel: 2,
       tdlibParameters: {
         'use_message_database': true,
@@ -39,6 +38,9 @@ class Client {
       '_update': emptyFunction,
       '_error': emptyFunction,
     }
+    this.wdPath = path.resolve(process.cwd(), this.options.workingDirectoryPath)
+    this.logPath = path.resolve(this.wdPath, 'log')
+    ensureDir(this.logPath)
     this.init()
   }
 
@@ -57,7 +59,7 @@ class Client {
           'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
         }
       )
-      this.tdlib.td_set_log_file_path(path.resolve(process.cwd(), '_td_logs.txt'))
+      this.tdlib.td_set_log_file_path(path.resolve(this.logPath, `${this.options.phoneNumber}.log`))
       this.tdlib.td_set_log_verbosity_level(this.options.verbosityLevel)
       this.tdlib.td_set_log_fatal_error_callback(ffi.Callback('void', ['string'], (message) => {
         console.error('TDLib Fatal Error:', message)
@@ -107,8 +109,8 @@ class Client {
           'parameters': {
             ...this.options.tdlibParameters,
             '@type': 'tdlibParameters',
-            'database_directory': path.resolve(tdLibWD, this.options.phoneNumber, '_td_database'),
-            'files_directory': path.resolve(tdLibWD, this.options.phoneNumber, '_td_files'),
+            'database_directory': path.resolve(this.wdPath, this.options.phoneNumber, '_td_database'),
+            'files_directory': path.resolve(this.wdPath, this.options.phoneNumber, '_td_files'),
             'api_id': this.options.apiId,
             'api_hash': this.options.apiHash,
           },

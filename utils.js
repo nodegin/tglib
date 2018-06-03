@@ -1,5 +1,26 @@
+const fs = require('fs')
+const path = require('path')
 const ref = require('ref-napi')
 const inquirer = require('inquirer')
+
+const mkdirp = dir => path
+    .resolve(dir)
+    .split(path.sep)
+    .reduce((acc, cur) => {
+        const currentPath = path.normalize(acc + path.sep + cur)
+        try {
+            fs.statSync(currentPath)
+        } catch (e) {
+            if (e.code === 'ENOENT') {
+                fs.mkdirSync(currentPath)
+            } else {
+                throw e
+            }
+        }
+        return currentPath
+    }, '')
+
+const ensureDir = p => fs.statSync(mkdirp(p)).isDirectory()
 
 const utils = {
   buildQuery(query) {
@@ -18,6 +39,7 @@ const utils = {
     return input
   },
   emptyFunction() {},
+  ensureDir,
 }
 
 module.exports = utils
