@@ -5,6 +5,13 @@ class InvalidEventError extends Error {
   }
 }
 
+class InvalidBotTokenError extends Error {
+  constructor(token) {
+    super()
+    this.message = `Bot access token "${token}" is not valid`
+  }
+}
+
 class ClientCreateError extends Error {
   constructor(error) {
     super(error)
@@ -15,7 +22,7 @@ class ClientCreateError extends Error {
 class ClientNotCreatedError extends Error {
   constructor(error) {
     super(error)
-    this.message = `Client is not created.`
+    this.message = 'Client is not created'
   }
 }
 
@@ -28,6 +35,7 @@ class ClientFetchError extends Error {
 
 module.exports = {
   InvalidEventError,
+  InvalidBotTokenError,
   ClientCreateError,
   ClientNotCreatedError,
   ClientFetchError,

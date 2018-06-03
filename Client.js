@@ -6,8 +6,14 @@ const path = require('path')
 
 const TG = require('./TG')
 const { version: appVersion } = require('./package.json')
-const { InvalidEventError, ClientCreateError, ClientNotCreatedError, ClientFetchError } = require('./Errors')
 const { buildQuery, getInput, emptyFunction } = require('./utils')
+const {
+  InvalidEventError,
+  InvalidBotTokenError,
+  ClientCreateError,
+  ClientNotCreatedError,
+  ClientFetchError,
+} = require('./Errors')
 
 class Client {
   constructor(options = {}) {
@@ -31,9 +37,10 @@ class Client {
       ...defaultOptions,
       ...options,
     }
-    this.ready = new Promise((resolve) => {
+    this.ready = new Promise((resolve, reject) => {
       // Add some delay to allow telegram get ready. (Issue #20)
       this.resolver = () => setTimeout(resolve, 500)
+      this.rejector = reject
     })
     this.client = null
     this.tg = null
@@ -77,10 +84,11 @@ class Client {
 
       this.client = await this._create()
       this.tg = new TG(this)
-      this.loop()
     } catch (error) {
-      throw new ClientCreateError(error)
+      this.rejector(new ClientCreateError(error))
+      return
     }
+    this.loop()
   }
 
   on(eventName, listener) {
@@ -93,21 +101,20 @@ class Client {
 
   async loop() {
     const update = await this._receive()
-    if (!update) {
-      return this.loop()
-    }
-    switch (update['@type']) {
-      case 'updateAuthorizationState': {
-        await this.handleAuth(update)
-        break
+    if (update) {
+      switch (update['@type']) {
+        case 'updateAuthorizationState': {
+          await this.handleAuth(update)
+          break
+        }
+        case 'error': {
+          await this.handleError(update)
+          break
+        }
+        default:
+          await this.handleUpdate(update)
+          break
       }
-      case 'error': {
-        await this.handleError(update)
-        break
-      }
-      default:
-        await this.handleUpdate(update)
-        break
     }
     this.loop()
   }
@@ -115,7 +122,7 @@ class Client {
   async handleAuth(update) {
     switch (update['authorization_state']['@type']) {
       case 'authorizationStateWaitTdlibParameters': {
-        return this._send({
+        this._send({
           '@type': 'setTdlibParameters',
           'parameters': {
             ...this.options.tdlibParameters,
@@ -126,66 +133,52 @@ class Client {
             'api_hash': this.options.apiHash,
           },
         })
+        break
       }
       case 'authorizationStateWaitEncryptionKey': {
-        return this._send({
-          '@type': 'checkDatabaseEncryptionKey',
-        })
+        this._send({ '@type': 'checkDatabaseEncryptionKey' })
+        break
       }
       case 'authorizationStateWaitPhoneNumber': {
         const { auth: { type, value } } = this.options
-        return type === 'user' ? (
+        console.log(`Authorizing ${type} (${value})`)
+        if (type === 'user') {
           this._send({
             '@type': 'setAuthenticationPhoneNumber',
             'phone_number': value,
           })
-        ) : (
+        } else {
           this._send({
             '@type': 'checkAuthenticationBotToken',
             'token': value,
           })
-        )
+        }
+        break
       }
       case 'authorizationStateWaitCode': {
         const code = await getInput('input', 'Please enter auth code: ')
-        return this._send({
+        this._send({
           '@type': 'checkAuthenticationCode',
           'code': code,
         })
+        break
       }
       case 'authorizationStateWaitPassword': {
         const passwordHint = update['authorization_state']['password_hint']
         const password = await getInput('password', `Please enter password (${passwordHint}): `)
-        return this._send({
+        this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
         })
+        break
       }
       case 'authorizationStateReady':
-        return this.resolver()
+        this.resolver()
+        break
     }
   }
 
   async handleError(update) {
-    switch (update['message']) {
-      case 'PHONE_CODE_EMPTY':
-      case 'PHONE_CODE_INVALID': {
-        const code = await getInput('input', 'Wrong auth code, please re-enter: ')
-        await this._send({
-          '@type': 'checkAuthenticationCode',
-          'code': code,
-        })
-        return
-      }
-      case 'PASSWORD_HASH_INVALID': {
-        const password = await getInput('password', `Wrong password, please re-enter: `)
-        await this._send({
-          '@type': 'checkAuthenticationPassword',
-          'password': password,
-        })
-        return
-      }
-    }
     const id = update['@extra']
     if (this.fetching[id]) {
       delete update['@extra']
@@ -193,7 +186,32 @@ class Client {
       delete this.fetching[id]
       return
     }
-    this.listeners['_error'].call(null, update)
+    switch (update['message']) {
+      case 'PHONE_CODE_EMPTY':
+      case 'PHONE_CODE_INVALID': {
+        const code = await getInput('input', 'Wrong auth code, please re-enter: ')
+        this._send({
+          '@type': 'checkAuthenticationCode',
+          'code': code,
+        })
+        break
+      }
+      case 'PASSWORD_HASH_INVALID': {
+        const password = await getInput('password', `Wrong password, please re-enter: `)
+        this._send({
+          '@type': 'checkAuthenticationPassword',
+          'password': password,
+        })
+        break
+      }
+      case 'ACCESS_TOKEN_INVALID': {
+        this.rejector(new InvalidBotTokenError(this.options.auth.value))
+        break
+      }
+      default: {
+        this.listeners['_error'].call(null, update)
+      }
+    }
   }
 
   async handleUpdate(update) {
@@ -212,8 +230,9 @@ class Client {
           break
         }
       }
-      default:
+      default: {
         this.listeners['_update'].call(null, update)
+      }
     }
   }
 
@@ -222,15 +241,14 @@ class Client {
     query['@extra'] = id
     const receiveUpdate = new Promise((resolve, reject) => {
       this.fetching[id] = { resolve, reject }
-      // timeout after 29 seconds
+      // timeout after 15 seconds
       setTimeout(() => {
         delete this.fetching[id]
-        reject('Query timed out after 29 seconds.')
-      }, 1000 * 29)
+        reject('Query timed out after 15 seconds.')
+      }, 1000 * 15)
     })
     await this._send(query)
-    const result = await receiveUpdate
-    return result
+    return receiveUpdate
   }
 
   _create() {
@@ -247,7 +265,7 @@ class Client {
   _send(query) {
     return new Promise((resolve, reject) => {
       if (!this.client) {
-        return reject(new ClientNotCreatedError)
+        return reject(new ClientNotCreatedError())
       }
       this.tdlib.td_json_client_send.async(this.client, buildQuery(query), (err, response) => {
         if (err) {
@@ -264,7 +282,7 @@ class Client {
   _receive(timeout = 10) {
     return new Promise((resolve, reject) => {
       if (!this.client) {
-        return reject(new ClientNotCreatedError)
+        return reject(new ClientNotCreatedError())
       }
       this.tdlib.td_json_client_receive.async(this.client, timeout, (err, response) => {
         if (err) {
@@ -281,7 +299,7 @@ class Client {
   _execute(query) {
     return new Promise((resolve, reject) => {
       if (!this.client) {
-        return reject(new ClientNotCreatedError)
+        return reject(new ClientNotCreatedError())
       }
       try {
         const response = this.tdlib.td_json_client_execute(this.client, buildQuery(query))
