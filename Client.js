@@ -7,6 +7,8 @@ const { InvalidEventError, ClientCreateError, ClientNotCreatedError } = require(
 
 const { buildQuery, getInput, emptyFunction } = require('./utils')
 
+const tdLibWD = path.resolve(process.cwd(), '.td')
+
 class Client {
   constructor(options = {}) {
     const defaultOptions = {
@@ -105,8 +107,8 @@ class Client {
           'parameters': {
             ...this.options.tdlibParameters,
             '@type': 'tdlibParameters',
-            'database_directory': path.resolve(process.cwd(), '_td_database'),
-            'files_directory': path.resolve(process.cwd(), '_td_files'),
+            'database_directory': path.resolve(tdLibWD, this.options.phoneNumber, '_td_database'),
+            'files_directory': path.resolve(tdLibWD, this.options.phoneNumber, '_td_files'),
             'api_id': this.options.apiId,
             'api_hash': this.options.apiHash,
           },
