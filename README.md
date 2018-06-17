@@ -23,7 +23,7 @@ tglib provide some useful methods that makes your Telegram app development easie
 const client = new Client({
   apiId: 'YOUR_API_ID',
   apiHash: 'YOUR_API_HASH',
-  credentials: {
+  auth: {
     type: 'user',
     value: 'YOUR_PHONE_NUMBER',
   },
@@ -36,7 +36,7 @@ const client = new Client({
 const client = new Client({
   apiId: 'YOUR_API_ID',
   apiHash: 'YOUR_API_HASH',
-  credentials: {
+  auth: {
     type: 'bot',
     value: 'YOUR_BOT_TOKEN',
   },
