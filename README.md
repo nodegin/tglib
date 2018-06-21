@@ -183,7 +183,7 @@ await client.tg.sendTextMessage('123456789', 'Hello *World*', {
 </details>
 
 
-##### `client.tg.updateUsername(username, supergroupId = null)` -> Promise -> Object
+##### `client.tg.updateUsername(username, supergroupId = null)` -> Promise -> Void
 
 
 <details>
