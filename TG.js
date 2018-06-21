@@ -65,7 +65,7 @@ class TG {
    *  Get all chats.
    */
   async getAllChats() {
-    let { chat_ids: chats} = await this.client.fetch({
+    let { chat_ids: chats } = await this.client.fetch({
       '@type': 'getChats', 
       'offset_order': '9223372036854775807',
       'offset_chat_id': 0,
