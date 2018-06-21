@@ -216,6 +216,40 @@ const chats = await client.tg.getAllChats()
 </p>
 </details>
 
+
+##### `client.tg.openSecretChat(userId)` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to open a secret chat with given user ID.
+
+Note: Secret chats are associated with the corresponding TDLib folder. (i.e. only available on the same device).
+
+```js
+const chat = await client.tg.openSecretChat(123456789)
+```
+</p>
+</details>
+
+
+##### `client.tg.deleteChat(chatId)` -> Promise -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to delete a chat and remove it from the chat list. You can use this API to delete "private", "secret", "basicGroup", and "supergroup" chats.
+
+```js
+await client.tg.deleteChat(-12345678901234)
+```
+</p>
+</details>
+
 -----
 
 ### Requirements

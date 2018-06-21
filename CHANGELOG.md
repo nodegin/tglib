@@ -6,6 +6,8 @@
 
 - Added new high level API `client.tg.updateUsername`.
 - Added new high level API `client.tg.getAllChats`.
+- Added new high level API `client.tg.openSecretChat`.
+- Added new high level API `client.tg.deleteChat`.
 - Fixes new user authorization. (#24)
 - Improve documentations.
 

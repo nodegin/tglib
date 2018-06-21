@@ -69,7 +69,7 @@ class TG {
       '@type': 'getChats', 
       'offset_order': '9223372036854775807',
       'offset_chat_id': 0,
-      'limit': 99999,
+      'limit': Math.floor(Math.random() * 9999999),
     })
     chats = chats.map((chatId) => this.client.fetch({
       '@type': 'getChat', 
@@ -107,6 +107,65 @@ class TG {
       }
       const result = await this.client.fetch(payload)
       resolve(result)
+    })
+  }
+
+  /*
+   *  Opens a secret chat with given user ID.
+   */
+  async openSecretChat(userId) {
+    let secretChat = await this.getAllChats()
+    secretChat = secretChat.find(({ type: { '@type': type, user_id: user } }) => {
+      return type === 'chatTypeSecret' && user === userId
+    })
+    // created already
+    if (secretChat) {
+      return secretChat
+    }
+    // create new secret chat
+    secretChat = await this.client.fetch({
+      '@type': 'createNewSecretChat',
+      'user_id': userId,
+    })
+    return secretChat
+  }
+
+  /*
+   *  Close and remove a chat.
+   */
+  async deleteChat(chatId) {
+    const chat = await this.client.fetch({
+      '@type': 'getChat',
+      'chat_id': chatId,
+    })
+
+    let payload = {}
+    switch (chat.type['@type']) {
+      case 'chatTypeBasicGroup':
+      case 'chatTypeSupergroup': {
+        const { id } = await this.client.fetch({ '@type': 'getMe' })
+        payload['@type'] = 'setChatMemberStatus'
+        payload['user_id'] = id
+        payload['chat_id'] = chat.id
+        payload['status'] = { '@type': 'chatMemberStatusLeft' }
+        break
+      }
+      case 'chatTypeSecret': {
+        payload['@type'] = 'closeSecretChat'
+        payload['secret_chat_id'] = chat.type.secret_chat_id
+        break
+      }
+      default: {
+        payload['@type'] = 'closeChat'
+        payload['chat_id'] = chat.id
+        break
+      }
+    }
+    await this.client.fetch(payload)
+    await this.client.fetch({
+      '@type': 'deleteChatHistory',
+      'chat_id': chat.id,
+      'remove_from_chat_list': true,
     })
   }
 }

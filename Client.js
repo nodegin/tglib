@@ -25,7 +25,7 @@ class Client {
       verbosityLevel: 2,
       tdlibParameters: {
         'use_message_database': true,
-        'use_secret_chats': false,
+        'use_secret_chats': true,
         'system_language_code': 'en',
         'application_version': '1.0',
         'device_model': 'tglib',
