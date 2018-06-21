@@ -170,12 +170,48 @@ tglib provides a collection of APIs that designed for ease of use and handiness.
 
 This API is provided by tglib, you can use this API to send message to a chat. If the `options` argument is specified, the function will combine your options with its default.
 
+This API uses "parseTextEntities" method which requires TDLib 1.1.0 or above, see [TDLib changelog](https://git.io/tdlibchanges) for details.
+
 ```js
-await client.sendTextMessage('123456789', 'Hello *World*', {
+await client.tg.sendTextMessage('123456789', 'Hello *World*', {
   'parse_mode': 'markdown',
   'disable_notification': true,
   'clear_draft': false,
 })
+```
+</p>
+</details>
+
+
+##### `client.tg.updateUsername(username, supergroupId = null)` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to update the username for session user or a supergroup chat.
+
+This API uses "checkChatUsername" method which requires TDLib 1.2.0 or above, see [TDLib changelog](https://git.io/tdlibchanges) for details.
+
+```js
+await client.tg.updateUsername('a_new_username')
+```
+</p>
+</details>
+
+
+##### `client.tg.getAllChats()` -> Promise -> Array
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to get all available chats of session user.
+
+```js
+const chats = await client.tg.getAllChats()
 ```
 </p>
 </details>

@@ -2,6 +2,15 @@
 
 -----
 
+#### tglib v1.4
+
+- Added new high level API `client.tg.updateUsername`.
+- Added new high level API `client.tg.getAllChats`.
+- Fixes new user authorization. (#24)
+- Improve documentations.
+
+-----
+
 #### tglib v1.3
 
 - Now support multiple session login by storing files in separate directories. (#16, #19)

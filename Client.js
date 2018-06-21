@@ -120,6 +120,7 @@ class Client {
   }
 
   async handleAuth(update) {
+    const { auth: { type, value } } = this.options
     switch (update['authorization_state']['@type']) {
       case 'authorizationStateWaitTdlibParameters': {
         this._send({
@@ -140,7 +141,6 @@ class Client {
         break
       }
       case 'authorizationStateWaitPhoneNumber': {
-        const { auth: { type, value } } = this.options
         console.log(`Authorizing ${type} (${value})`)
         if (type === 'user') {
           this._send({
@@ -156,6 +156,16 @@ class Client {
         break
       }
       case 'authorizationStateWaitCode': {
+        const payload = { '@type': 'checkAuthenticationCode' }
+        if (!update['authorization_state']['is_registered']) {
+          console.log(`User ${value} has not yet been registered with Telegram`)
+          payload['first_name'] = await getInput('input', 'Please enter your name: ')
+        }
+        payload['code'] = await getInput('input', 'Please enter auth code: ')
+        this._send(payload)
+        break
+
+
         const code = await getInput('input', 'Please enter auth code: ')
         this._send({
           '@type': 'checkAuthenticationCode',
