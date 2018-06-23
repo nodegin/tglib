@@ -12,11 +12,11 @@ void async function() {
 
   await client.ready
 
-  client.on('_update', (update) => {
+  client.registerCallback('td:update', (update) => {
     console.log('Got update:', JSON.stringify(update, null, 2))
   })
 
-  client.on('_error', (update) => {
+  client.registerCallback('td:error', (update) => {
     console.error('Got error:', JSON.stringify(update, null, 2))
   })
 }()

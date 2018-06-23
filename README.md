@@ -56,18 +56,18 @@ await client.ready
 ```
 
 
-##### `client.on(event, callback)` -> Void
+##### `client.registerCallback(key, callback)` -> Void
 
 
 <details>
 <summary>Expand</summary>
 <p>
 
-This API is provided by tglib, you can use this API to attach an event listener for iterating updates.
+This API is provided by tglib, you can use this API to register your function in order to receive callbacks.
 
 ```js
-client.on('_update', console.log.bind(console))
-client.on('_error', console.error.bind(console))
+client.registerCallback('td:update', (update) => console.log(update))
+client.registerCallback('td:error', (error) => console.error(error))
 ```
 </p>
 </details>
@@ -161,22 +161,50 @@ const chats = await client.fetch({
 tglib provides a collection of APIs that designed for ease of use and handiness. These APIs are located under `client.tg` property.
 
 
-##### `client.tg.sendTextMessage(chatId, text, options = {})` -> Promise -> Void
+##### `client.tg.sendTextMessage(args = {})` -> Promise -> Void
 
 
 <details>
 <summary>Expand</summary>
 <p>
 
-This API is provided by tglib, you can use this API to send message to a chat. If the `options` argument is specified, the function will combine your options with its default.
+This API is provided by tglib, you can use this API to send message to a chat. The function will combine custom options specified in `args` with its default.
 
-This API uses "parseTextEntities" method which requires TDLib 1.1.0 or above, see [TDLib changelog](https://git.io/tdlibchanges) for details.
+The `TextStruct` struct uses "parseTextEntities" method which requires TDLib 1.1.0 or above, see [TDLib changelog](https://git.io/tdlibchanges) for details.
 
 ```js
-await client.tg.sendTextMessage('123456789', 'Hello *World*', {
-  'parse_mode': 'markdown',
+const { TextStruct } = require('tglib/structs')
+
+await client.tg.sendTextMessage({
+  '$text': new TextStruct('`Hello` world!', 'textParseModeMarkdown'),
+  'chat_id': 123456789,
   'disable_notification': true,
   'clear_draft': false,
+})
+```
+</p>
+</details>
+
+
+##### `client.tg.sendPhotoMessage(args = {})` -> Promise -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to send photo to a chat. The function will combine custom options specified in `args` with its default.
+
+The `TextStruct` struct uses "parseTextEntities" method which requires TDLib 1.1.0 or above, see [TDLib changelog](https://git.io/tdlibchanges) for details.
+
+```js
+const { TextStruct } = require('tglib/structs')
+
+await client.tg.sendPhotoMessage({
+  '$caption': new TextStruct('Such doge much wow'),
+  'chat_id': 123456789,
+  'path': '/tmp/doge.jpg',
+  'ttl': 5,
 })
 ```
 </p>

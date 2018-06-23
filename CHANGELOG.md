@@ -2,12 +2,75 @@
 
 -----
 
+#### tglib v2.0.0
+
+- Breaking changes: Rewrited `client.tg.sendTextMessage`.
+
+*The old way to send text message:*
+```js
+await client.tg.sendTextMessage('123456789', 'Hello *World*', {
+  'parse_mode': 'markdown',
+  'disable_notification': true,
+  'clear_draft': false,
+})
+```
+*The new way to send text message:*
+```js
+const { TextStruct } = require('tglib/structs')
+
+await client.tg.sendTextMessage({
+  '$text': new TextStruct('`Hello` world!', 'textParseModeMarkdown'),
+  'chat_id': 123456789,
+  'disable_notification': true,
+  'clear_draft': false,
+})
+```
+- Added `tglib/structs` for common structures.
+- Added `TextStruct` for formatted text struct, used in `inputMessageText.text`, `inputMessagePhoto.caption`, etc.
+```js
+const text1 = new TextStruct('Normal text')
+const text2 = new TextStruct('`Markdown` text', 'textParseModeMarkdown')
+const text3 = new TextStruct('<b>HTML</b> text', 'textParseModeHTML')
+```
+- Added a new high level API `client.tg.sendPhotoMessage`.
+```js
+const { TextStruct } = require('tglib/structs')
+
+await client.tg.sendPhotoMessage({
+  '$caption': new TextStruct('Such doge much wow'),
+  'chat_id': 123456789,
+  'path': '/tmp/doge.jpg',
+  'ttl': 5,
+})
+```
+- Breaking changes: `client.on` now renamed to `client.registerCallback`.
+
+*The old way to receive updates and errors:*
+```js
+client.on('_update', (update) => console.log(update))
+client.on('_error', (error) => console.error(error))
+```
+
+*The new way to receive updates and errors:*
+```js
+client.registerCallback('td:update', (update) => console.log(update))
+client.registerCallback('td:error', (error) => console.error(error))
+```
+- Added a new callback `td:getInput` to split out the `getInput` function from core, you can now register your own callback function to handle the login process.
+```js
+client.registerCallback('td:getInput', async (args) => {
+  const result = await getInputFromUser(args)
+  return result
+})
+```
+-----
+
 #### tglib v1.4
 
-- Added new high level API `client.tg.updateUsername`.
-- Added new high level API `client.tg.getAllChats`.
-- Added new high level API `client.tg.openSecretChat`.
-- Added new high level API `client.tg.deleteChat`.
+- Added a new high level API `client.tg.updateUsername`.
+- Added a new high level API `client.tg.getAllChats`.
+- Added a new high level API `client.tg.openSecretChat`.
+- Added a new high level API `client.tg.deleteChat`.
 - Fixes new user authorization. (#24)
 - Improve documentations.
 

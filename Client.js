@@ -8,7 +8,7 @@ const TG = require('./TG')
 const { version: appVersion } = require('./package.json')
 const { buildQuery, getInput, emptyFunction } = require('./utils')
 const {
-  InvalidEventError,
+  InvalidCallbackKeyError,
   InvalidBotTokenError,
   ClientCreateError,
   ClientNotCreatedError,
@@ -24,13 +24,13 @@ class Client {
       binaryPath: 'libtdjson',
       verbosityLevel: 2,
       tdlibParameters: {
+        'enable_storage_optimizer': true,
         'use_message_database': true,
         'use_secret_chats': true,
         'system_language_code': 'en',
         'application_version': '1.0',
         'device_model': 'tglib',
         'system_version': appVersion,
-        'enable_storage_optimizer': true,
       },
     }
     this.options = {
@@ -45,9 +45,12 @@ class Client {
     this.client = null
     this.tg = null
     this.fetching = {}
-    this.listeners = {
-      '_update': emptyFunction,
-      '_error': emptyFunction,
+    this.callbacks = {
+      'td:update': emptyFunction,
+      'td:error': emptyFunction,
+      'td:getInput'({ type, string, extras: { hint } = {} }) {
+        return getInput(type, `${string}${ hint ? ` (${hint})` : '' }`)
+      },
     }
     this.init()
   }
@@ -91,12 +94,18 @@ class Client {
     this.loop()
   }
 
-  on(eventName, listener) {
-    const validNames = Object.keys(this.listeners)
-    if (validNames.indexOf(eventName) < 0) {
-      throw new InvalidEventError(eventName)
+  registerCallback(key, callback) {
+    const validNames = Object.keys(this.callbacks)
+    if (validNames.indexOf(key) < 0) {
+      throw new InvalidCallbackError(key)
     }
-    this.listeners[eventName] = listener
+    if (key === 'td:getInput') {
+      const result = callback({}) || {}
+      if (typeof result.then !== 'function') {
+        throw new InvalidCallbackError(key)
+      }
+    }
+    this.callbacks[key] = callback
   }
 
   async loop() {
@@ -159,23 +168,25 @@ class Client {
         const payload = { '@type': 'checkAuthenticationCode' }
         if (!update['authorization_state']['is_registered']) {
           console.log(`User ${value} has not yet been registered with Telegram`)
-          payload['first_name'] = await getInput('input', 'Please enter your name: ')
+          payload['first_name'] = await this.callbacks['td:getInput']({
+            type: 'input',
+            string: 'AuthorizationFirstNameInput',
+          })
         }
-        payload['code'] = await getInput('input', 'Please enter auth code: ')
-        this._send(payload)
-        break
-
-
-        const code = await getInput('input', 'Please enter auth code: ')
-        this._send({
-          '@type': 'checkAuthenticationCode',
-          'code': code,
+        payload['code'] = await this.callbacks['td:getInput']({
+          type: 'input',
+          string: 'AuthorizationAuthCodeInput',
         })
+        this._send(payload)
         break
       }
       case 'authorizationStateWaitPassword': {
-        const passwordHint = update['authorization_state']['password_hint']
-        const password = await getInput('password', `Please enter password (${passwordHint}): `)
+        this.authFlowPasswordHint = update['authorization_state']['password_hint']
+        const password = await this.callbacks['td:getInput']({
+          type: 'password',
+          string: 'AuthorizationPasswordInput',
+          extras: { hint: this.authFlowPasswordHint },
+        })
         this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
@@ -183,6 +194,7 @@ class Client {
         break
       }
       case 'authorizationStateReady':
+        delete this.authFlowPasswordHint
         this.resolver()
         break
     }
@@ -199,7 +211,10 @@ class Client {
     switch (update['message']) {
       case 'PHONE_CODE_EMPTY':
       case 'PHONE_CODE_INVALID': {
-        const code = await getInput('input', 'Wrong auth code, please re-enter: ')
+        const code = await this.callbacks['td:getInput']({
+          type: 'input',
+          string: 'AuthorizationAuthCodeReInput',
+        })
         this._send({
           '@type': 'checkAuthenticationCode',
           'code': code,
@@ -207,7 +222,11 @@ class Client {
         break
       }
       case 'PASSWORD_HASH_INVALID': {
-        const password = await getInput('password', `Wrong password, please re-enter: `)
+        const password = await this.callbacks['td:getInput']({
+          type: 'password',
+          string: 'AuthorizationPasswordReInput',
+          extras: { hint: this.authFlowPasswordHint },
+        })
         this._send({
           '@type': 'checkAuthenticationPassword',
           'password': password,
@@ -219,7 +238,7 @@ class Client {
         break
       }
       default: {
-        this.listeners['_error'].call(null, update)
+        this.callbacks['td:error'].call(null, update)
       }
     }
   }
@@ -241,7 +260,7 @@ class Client {
         }
       }
       default: {
-        this.listeners['_update'].call(null, update)
+        this.callbacks['td:update'].call(null, update)
       }
     }
   }

@@ -14,7 +14,7 @@ void async function() {
 
   const { id: myId } = await client.fetch({ '@type': 'getMe' })
 
-  client.on('_update', async (update) => {
+  client.registerCallback('td:update', async (update) => {
     if (update['@type'] === 'updateNewMessage') {
       // check if message is sent from self
       const sender = update['message']['sender_user_id']

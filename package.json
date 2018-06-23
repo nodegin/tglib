@@ -1,6 +1,6 @@
 {
   "name": "tglib",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "TDLib (Telegram Database library) bindings for Node.js",
   "main": "index.js",
   "scripts": {

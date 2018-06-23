@@ -1,7 +1,7 @@
-class InvalidEventError extends Error {
+class InvalidCallbackError extends Error {
   constructor(eventName) {
     super()
-    this.message = `"${eventName}" is not a valid event name.`
+    this.message = `"${eventName}" is not a valid callback.`
   }
 }
 
@@ -34,7 +34,7 @@ class ClientFetchError extends Error {
 }
 
 module.exports = {
-  InvalidEventError,
+  InvalidCallbackError,
   InvalidBotTokenError,
   ClientCreateError,
   ClientNotCreatedError,
