@@ -51,7 +51,7 @@ class TG {
     const { $caption, ...options } = args
     const payload = {
       '@type': 'sendMessage',
-      'chat_id': chatId,
+      'chat_id': 0,
       'reply_to_message_id': 0,
       'disable_notification': false,
       'from_background': true,
@@ -60,7 +60,7 @@ class TG {
         '@type': 'inputMessagePhoto',
         'photo': {
           '@type': 'inputFileLocal',
-          'path': path,
+          'path': null,
         },
         'thumbnail': null,
         'added_sticker_file_ids': [],
