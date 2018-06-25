@@ -4,7 +4,7 @@
 
 #### tglib v2.0.0
 
-- Breaking changes: Rewrited `client.tg.sendTextMessage`.
+- Breaking changes: Rewrote `client.tg.sendTextMessage`.
 
 *The old way to send text message:*
 ```js
