@@ -65,9 +65,15 @@ await client.ready
 
 This API is provided by tglib, you can use this API to register your function in order to receive callbacks.
 
+The authorization process can be overridden here by registering `td:getInput` callback.
+
 ```js
 client.registerCallback('td:update', (update) => console.log(update))
 client.registerCallback('td:error', (error) => console.error(error))
+client.registerCallback('td:getInput', async (args) => {
+  const result = await getInputFromUser(args)
+  return result
+})
 ```
 </p>
 </details>
