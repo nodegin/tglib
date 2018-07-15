@@ -288,10 +288,18 @@ await client.tg.deleteChat(-12345678901234)
 
 ### Requirements
 
-- TDLib binary
-> If you planning to build TDLib for Windows, please see [here](https://github.com/c0re100/F9TelegramUtils#compile-tdlib-on-windows) for more information.
 - Node.js 10 preferred (minimum >= 9.0.0)
 > Note: If you are using Node.js 9.x, you may encounter a warning message `Warning: N-API is an experimental feature and could change at any time.`, this can be suppressed by upgrading to version 10.
+
+- TDLib binary (see build instructions below)
+
+> [Windows](https://github.com/c0re100/F9TelegramUtils#compile-tdlib-on-windows)
+
+> [macOS](https://github.com/tdlib/td#macos)
+
+> [Linux - CentOS 7.5](https://github.com/nodegin/tglib/blob/master/examples/centos_75.sh)
+
+Note: building TDLib binary requires at least 8GB of memory, otherwise building process will fail.
 
 -----
 
