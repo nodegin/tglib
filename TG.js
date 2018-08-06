@@ -184,6 +184,28 @@ class TG {
       'remove_from_chat_list': true,
     })
   }
+
+  /*
+   *  Get chat by username or id
+   */
+  async getChat(args = {}) {
+    const { username, chat_id } = args
+    let chat = {}
+    if (username) {
+      chat = await this.client.fetch({
+        '@type': 'searchPublicChat',
+        username,
+      })
+    } else if (chat_id) {
+      chat = await this.client.fetch({
+        '@type': 'getChat',
+        chat_id,
+      })
+    } else {
+      throw new Error('Neither username nor chat_id were specified for method "getChat"')
+    }
+    return chat
+  }
 }
 
 module.exports = TG

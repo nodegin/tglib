@@ -284,6 +284,23 @@ await client.tg.deleteChat(-12345678901234)
 </p>
 </details>
 
+
+##### `client.tg.getChat(args = {})` -> Promise -> Object
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to get a chat by username or chat id. This method requires either `username` option, or `chat_id` option.
+
+```js
+const chat1 = await client.tg.getChat({ username: 'chat_username' })
+const chat2 = await client.tg.getChat({ chat_id: '-12345678901234' })
+```
+</p>
+</details>
+
 -----
 
 ### Requirements
