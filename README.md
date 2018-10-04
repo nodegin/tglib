@@ -13,9 +13,18 @@ TDLib (Telegram Database library) bindings for Node.js
 
 -----
 
+### Options
+
+- `dataDir`: Allows you to specify custom directory for your tglib user data. Defaults currect working directory.
+- `binaryPath`: Allows you to specify the path for TDLib binary. Defaults `libtdjson` in currect working directory.
+
+-----
+
 ### APIs
 
 tglib provide some useful methods that makes your Telegram app development easier.
+
+Most API classes/methods can be found in the official [TDLib documentation](https://core.telegram.org/tdlib/docs/classes.html).
 
 #### Authorizing an user
 
@@ -316,7 +325,7 @@ const chat2 = await client.tg.getChat({ chat_id: '-12345678901234' })
 
 > [Linux - CentOS 7.5](https://github.com/nodegin/tglib/blob/master/examples/centos_75.sh)
 
-Note: building TDLib binary requires at least 8GB of memory, otherwise building process will fail.
+Note: building TDLib binary requires at least 8GB of memory, otherwise building process will fail. Building in a Docker container is recommended.
 
 -----
 

@@ -2,6 +2,15 @@
 
 -----
 
+#### tglib v2.1.0
+
+- Added a new option `dataDir` for specifying `__tglib__` data directory.
+- Added a new option `binaryPath` for specifying TDLib binary.
+- Added a new high level API `client.tg.getChat`.
+- Fixed issue #36, update loop will now stop when client is destroyed.
+
+-----
+
 #### tglib v2.0.0
 
 - Breaking changes: Rewrote `client.tg.sendTextMessage`.

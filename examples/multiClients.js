@@ -1,4 +1,5 @@
-const { Client } = require('../tglib')
+const { Client } = require('tglib')
+const { TextStruct } = require('tglib/structs')
 
 async function initClients() {
   const clients = {}
@@ -26,5 +27,10 @@ async function initClients() {
 void async function() {
   const clients = await initClients()
 
-  await clients.alice.sendTextMessage(12345678, 'hello')
+  await client.tg.sendTextMessage({
+    '$text': new TextStruct('hello'),
+    'chat_id': 123456789,
+    'disable_notification': true,
+    'clear_draft': false,
+  })
 }()

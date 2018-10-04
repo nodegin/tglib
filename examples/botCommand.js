@@ -1,4 +1,5 @@
 const { Client } = require('tglib')
+const { TextStruct } = require('tglib/structs')
 
 void async function() {
   const client = new Client({
@@ -20,11 +21,18 @@ void async function() {
       const sender = update['message']['sender_user_id']
       if (sender !== myId) {
         const { text: { text } } = update['message']['content']
+        let replyText
         if (text.startsWith('/')) {
-          await client.tg.sendTextMessage(sender, `Are you requested "${text}"?`)
+          replyText = `Are you requested <b>${text}</b>?`
         } else {
-          await client.tg.sendTextMessage(sender, `Sorry I do not understand "${text}".`)
+          replyText = `Sorry I do not understand <b>${text}</b>.`
         }
+        await client.tg.sendTextMessage({
+          '$text': new TextStruct(replyText, 'textParseModeHTML'),
+          'chat_id': 123456789,
+          'disable_notification': true,
+          'clear_draft': false,
+        })
       }
     }
   })

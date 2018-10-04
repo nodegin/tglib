@@ -21,7 +21,8 @@ class Client {
       apiId: null,
       apiHash: null,
       auth: {},
-      binaryPath: 'libtdjson',
+      dataDir: process.cwd(),
+      binaryPath: path.resolve(process.cwd(), 'libtdjson'),
       verbosityLevel: 2,
       tdlibParameters: {
         'enable_storage_optimizer': true,
@@ -59,26 +60,24 @@ class Client {
     try {
       const {
         auth: { type, value },
+        dataDir,
         binaryPath,
         verbosityLevel,
       } = this.options
 
-      this.appDir = path.resolve(process.cwd(), '__tglib__', crc32(`${type}${value}`).toString())
+      this.appDir = path.resolve(dataDir, '__tglib__', crc32(`${type}${value}`).toString())
       await fs.ensureDir(this.appDir)
 
-      this.tdlib = ffi.Library(
-        path.resolve(process.cwd(), binaryPath),
-        {
-          'td_json_client_create'          : ['pointer', []],
-          'td_json_client_send'            : ['void'   , ['pointer', 'string']],
-          'td_json_client_receive'         : ['string' , ['pointer', 'double']],
-          'td_json_client_execute'         : ['string' , ['pointer', 'string']],
-          'td_json_client_destroy'         : ['void'   , ['pointer']],
-          'td_set_log_file_path'           : ['int'    , ['string']],
-          'td_set_log_verbosity_level'     : ['void'   , ['int']],
-          'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
-        }
-      )
+      this.tdlib = ffi.Library(binaryPath, {
+        'td_json_client_create'          : ['pointer', []],
+        'td_json_client_send'            : ['void'   , ['pointer', 'string']],
+        'td_json_client_receive'         : ['string' , ['pointer', 'double']],
+        'td_json_client_execute'         : ['string' , ['pointer', 'string']],
+        'td_json_client_destroy'         : ['void'   , ['pointer']],
+        'td_set_log_file_path'           : ['int'    , ['string']],
+        'td_set_log_verbosity_level'     : ['void'   , ['int']],
+        'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
+      })
       this.tdlib.td_set_log_file_path(path.resolve(this.appDir, 'logs.txt'))
       this.tdlib.td_set_log_verbosity_level(verbosityLevel)
       this.tdlib.td_set_log_fatal_error_callback(ffi.Callback('void', ['string'], (message) => {
@@ -109,6 +108,10 @@ class Client {
   }
 
   async loop() {
+    if (!this.client) {
+      // when client has been destroyed, stop the update loop
+      return
+    }
     const update = await this._receive()
     if (update) {
       switch (update['@type']) {
