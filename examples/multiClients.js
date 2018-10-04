@@ -27,7 +27,7 @@ async function initClients() {
 void async function() {
   const clients = await initClients()
 
-  await client.tg.sendTextMessage({
+  await clients.alice.sendTextMessage({
     '$text': new TextStruct('hello'),
     'chat_id': 123456789,
     'disable_notification': true,
