@@ -78,6 +78,39 @@ class TG {
   }
 
   /*
+   *  Send sticker message to an existing chat.
+   */
+  async sendStickerMessage(args = {}) {
+    const { $caption, ...options } = args
+    if (!options.path || !options.path.endsWith('webp')) {
+      throw 'WebP image must be passed for [sendStickerMessage] method'
+    }
+    const payload = {
+      '@type': 'sendMessage',
+      'chat_id': 0,
+      'reply_to_message_id': 0,
+      'disable_notification': false,
+      'from_background': true,
+      'reply_markup': null,
+      'input_message_content': {
+        '@type': 'inputMessageSticker',
+        'sticker': {
+          '@type': 'inputFileLocal',
+          'path': null,
+        },
+        'thumbnail': null,
+        'width': 0,
+        'height': 0,
+      },
+    }
+    combine(payload, options, [
+      'chat_id', 'reply_to_message_id', 'disable_notification', 'from_background',
+      'path', 'thumbnail', 'width', 'height',
+    ])
+    return this.client.fetch(payload)
+  }
+
+  /*
    *  Get all chats.
    */
   async getAllChats() {

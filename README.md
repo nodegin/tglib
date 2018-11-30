@@ -226,6 +226,25 @@ await client.tg.sendPhotoMessage({
 </details>
 
 
+##### `client.tg.sendStickerMessage(args = {})` -> Promise -> Void
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to send sticker to a chat. The function will combine custom options specified in `args` with its default.
+
+```js
+await client.tg.sendStickerMessage({
+  'chat_id': 123456789,
+  'path': '/tmp/doge.webp',
+})
+```
+</p>
+</details>
+
+
 ##### `client.tg.updateUsername(username, supergroupId = null)` -> Promise -> Void
 
 
