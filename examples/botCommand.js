@@ -1,5 +1,4 @@
-const { Client } = require('tglib')
-const { TextStruct } = require('tglib/structs')
+const { Client, Structs } = require('tglib')
 
 void async function() {
   const client = new Client({
@@ -37,7 +36,7 @@ void async function() {
           replyText = `Sorry I do not understand <b>${text}</b>.`
         }
         await client.tg.sendTextMessage({
-          '$text': new TextStruct(replyText, 'textParseModeHTML'),
+          '$text': new Structs.TextStruct(replyText, 'textParseModeHTML'),
           'chat_id': 123456789,
           'disable_notification': true,
           'clear_draft': false,
