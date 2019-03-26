@@ -1,5 +1,13 @@
 ## Changelog
 
+#### tglib v3.0.0
+
+WARNING: This release came with multiple breaking changes, please see README.md / examples for updated usages.
+
+- Breaking changes: Removed `dataDir` option in flavor of `appDir`
+- Breaking changes: Removed `auth` option
+- Added support for WebAssembly
+
 -----
 
 #### tglib v2.1.0
