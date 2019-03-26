@@ -5,10 +5,19 @@ void async function() {
   const client = new Client({
     apiId: 'YOUR_API_ID',
     apiHash: 'YOUR_API_HASH',
-    auth: {
-      type: 'bot',
-      value: 'YOUR_BOT_TOKEN',
-    },
+  })
+
+  // Save tglib default handler which prompt input at console
+  const defaultHandler = client.callbacks['td:getInput']
+
+  // Register own callback for returning auth details
+  client.registerCallback('td:getInput', async (args) => {
+    if (args.string === 'tglib.input.AuthorizationType') {
+      return 'bot'
+    } else if (args.string === 'tglib.input.AuthorizationValue') {
+      return 'YOUR_BOT_TOKEN'
+    }
+    return await defaultHandler(args)
   })
 
   await client.ready

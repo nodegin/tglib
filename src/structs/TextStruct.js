@@ -1,4 +1,4 @@
-class TextStruct {
+export default class TextStruct {
   constructor(text, parseMode) {
     this.text = text
     if (['textParseModeHTML', 'textParseModeMarkdown'].indexOf(parseMode) >= 0) {
@@ -24,5 +24,3 @@ class TextStruct {
     return args
   }
 }
-
-module.exports = TextStruct

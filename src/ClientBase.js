@@ -1,28 +1,17 @@
-const { crc32 } = require('crc')
-const ffi = require('ffi-napi')
-const ref = require('ref-napi')
-const fs = require('fs-extra')
-const path = require('path')
-
-const TG = require('./TG')
-const { version: appVersion } = require('./package.json')
-const { buildQuery, getInput, emptyFunction } = require('./utils')
-const {
-  InvalidCallbackKeyError,
+import { crc32 } from 'crc'
+import TG from './TG'
+import { version as appVersion } from '../package.json'
+import {
+  InvalidCallbackError,
   InvalidBotTokenError,
-  ClientCreateError,
-  ClientNotCreatedError,
   ClientFetchError,
-} = require('./Errors')
+} from './errors/index.js'
 
 class Client {
-  constructor(options = {}) {
+  constructor(mode, options = {}) {
     const defaultOptions = {
       apiId: null,
       apiHash: null,
-      auth: {},
-      dataDir: process.cwd(),
-      binaryPath: path.resolve(process.cwd(), 'libtdjson'),
       verbosityLevel: 2,
       tdlibParameters: {
         'enable_storage_optimizer': true,
@@ -44,65 +33,20 @@ class Client {
       this.rejector = reject
     })
     this.client = null
-    this.tg = null
+    this.tg = new TG(this)
     this.fetching = {}
     this.callbacks = {
-      'td:update': emptyFunction,
-      'td:error': emptyFunction,
-      'td:getInput'({ type, string, extras: { hint } = {} }) {
-        return getInput(type, `${string}${ hint ? ` (${hint})` : '' }`)
-      },
+      'td:update': () => {},
+      'td:error': () => {},
+      'td:getInput': () => { throw new Error('td:getInput callback is not set.') },
     }
     this.init()
-  }
-
-  async init() {
-    try {
-      const {
-        auth: { type, value },
-        dataDir,
-        binaryPath,
-        verbosityLevel,
-      } = this.options
-
-      this.appDir = path.resolve(dataDir, '__tglib__', crc32(`${type}${value}`).toString())
-      await fs.ensureDir(this.appDir)
-
-      this.tdlib = ffi.Library(binaryPath, {
-        'td_json_client_create'          : ['pointer', []],
-        'td_json_client_send'            : ['void'   , ['pointer', 'string']],
-        'td_json_client_receive'         : ['string' , ['pointer', 'double']],
-        'td_json_client_execute'         : ['string' , ['pointer', 'string']],
-        'td_json_client_destroy'         : ['void'   , ['pointer']],
-        'td_set_log_file_path'           : ['int'    , ['string']],
-        'td_set_log_verbosity_level'     : ['void'   , ['int']],
-        'td_set_log_fatal_error_callback': ['void'   , ['pointer']],
-      })
-      this.tdlib.td_set_log_file_path(path.resolve(this.appDir, 'logs.txt'))
-      this.tdlib.td_set_log_verbosity_level(verbosityLevel)
-      this.tdlib.td_set_log_fatal_error_callback(ffi.Callback('void', ['string'], (message) => {
-        console.error('TDLib Fatal Error:', message)
-      }))
-
-      this.client = await this._create()
-      this.tg = new TG(this)
-    } catch (error) {
-      this.rejector(new ClientCreateError(error))
-      return
-    }
-    this.loop()
   }
 
   registerCallback(key, callback) {
     const validNames = Object.keys(this.callbacks)
     if (validNames.indexOf(key) < 0) {
       throw new InvalidCallbackError(key)
-    }
-    if (key === 'td:getInput') {
-      const result = callback({}) || {}
-      if (typeof result.then !== 'function') {
-        throw new InvalidCallbackError(key)
-      }
     }
     this.callbacks[key] = callback
   }
@@ -128,11 +72,10 @@ class Client {
           break
       }
     }
-    this.loop()
+    setTimeout(() => this.loop(), 1)
   }
 
   async handleAuth(update) {
-    const { auth: { type, value } } = this.options
     switch (update['authorization_state']['@type']) {
       case 'authorizationStateWaitTdlibParameters': {
         this._send({
@@ -140,10 +83,10 @@ class Client {
           'parameters': {
             ...this.options.tdlibParameters,
             '@type': 'tdlibParameters',
-            'database_directory': path.resolve(this.appDir, 'database'),
-            'files_directory': path.resolve(this.appDir, 'files'),
             'api_id': this.options.apiId,
             'api_hash': this.options.apiHash,
+            'database_directory': this.options.databaseDir,
+            'files_directory': this.options.filesDir,
           },
         })
         break
@@ -153,7 +96,12 @@ class Client {
         break
       }
       case 'authorizationStateWaitPhoneNumber': {
-        console.log(`Authorizing ${type} (${value})`)
+        const type = await this.callbacks['td:getInput']({
+          string: 'tglib.input.AuthorizationType',
+        })
+        const value = await this.callbacks['td:getInput']({
+          string: 'tglib.input.AuthorizationValue',
+        })
         if (type === 'user') {
           this._send({
             '@type': 'setAuthenticationPhoneNumber',
@@ -172,13 +120,11 @@ class Client {
         if (!update['authorization_state']['is_registered']) {
           console.log(`User ${value} has not yet been registered with Telegram`)
           payload['first_name'] = await this.callbacks['td:getInput']({
-            type: 'input',
-            string: 'AuthorizationFirstNameInput',
+            string: 'tglib.input.FirstName',
           })
         }
         payload['code'] = await this.callbacks['td:getInput']({
-          type: 'input',
-          string: 'AuthorizationAuthCodeInput',
+          string: 'tglib.input.AuthorizationCode',
         })
         this._send(payload)
         break
@@ -186,8 +132,7 @@ class Client {
       case 'authorizationStateWaitPassword': {
         this.authFlowPasswordHint = update['authorization_state']['password_hint']
         const password = await this.callbacks['td:getInput']({
-          type: 'password',
-          string: 'AuthorizationPasswordInput',
+          string: 'tglib.input.AuthorizationPassword',
           extras: { hint: this.authFlowPasswordHint },
         })
         this._send({
@@ -215,8 +160,7 @@ class Client {
       case 'PHONE_CODE_EMPTY':
       case 'PHONE_CODE_INVALID': {
         const code = await this.callbacks['td:getInput']({
-          type: 'input',
-          string: 'AuthorizationAuthCodeReInput',
+          string: 'tglib.input.AuthorizationCodeIncorrect',
         })
         this._send({
           '@type': 'checkAuthenticationCode',
@@ -226,8 +170,7 @@ class Client {
       }
       case 'PASSWORD_HASH_INVALID': {
         const password = await this.callbacks['td:getInput']({
-          type: 'password',
-          string: 'AuthorizationPasswordReInput',
+          string: 'tglib.input.AuthorizationPasswordIncorrect',
           extras: { hint: this.authFlowPasswordHint },
         })
         this._send({
@@ -237,7 +180,7 @@ class Client {
         break
       }
       case 'ACCESS_TOKEN_INVALID': {
-        this.rejector(new InvalidBotTokenError(this.options.auth.value))
+        this.rejector(new InvalidBotTokenError())
         break
       }
       default: {
@@ -276,84 +219,12 @@ class Client {
       // timeout after 15 seconds
       setTimeout(() => {
         delete this.fetching[id]
-        reject('Query timed out after 15 seconds.')
-      }, 1000 * 15)
+        reject('Query timed out after 30 seconds.')
+      }, 1000 * 30)
     })
     await this._send(query)
     return receiveUpdate
   }
-
-  _create() {
-    return new Promise((resolve, reject) => {
-      this.tdlib.td_json_client_create.async((err, client) => {
-        if (err) {
-          return reject(err)
-        }
-        resolve(client)
-      })
-    })
-  }
-
-  _send(query) {
-    return new Promise((resolve, reject) => {
-      if (!this.client) {
-        return reject(new ClientNotCreatedError())
-      }
-      this.tdlib.td_json_client_send.async(this.client, buildQuery(query), (err, response) => {
-        if (err) {
-          return reject(err)
-        }
-        if (!response) {
-          return resolve(null)
-        }
-        resolve(JSON.parse(response))
-      })
-    })
-  }
-
-  _receive(timeout = 10) {
-    return new Promise((resolve, reject) => {
-      if (!this.client) {
-        return reject(new ClientNotCreatedError())
-      }
-      this.tdlib.td_json_client_receive.async(this.client, timeout, (err, response) => {
-        if (err) {
-          return reject(err)
-        }
-        if (!response) {
-          return resolve(null)
-        }
-        resolve(JSON.parse(response))
-      })
-    })
-  }
-
-  _execute(query) {
-    return new Promise((resolve, reject) => {
-      if (!this.client) {
-        return reject(new ClientNotCreatedError())
-      }
-      try {
-        const response = this.tdlib.td_json_client_execute(this.client, buildQuery(query))
-        if (!response) {
-          return resolve(null)
-        }
-        resolve(JSON.parse(response))
-      } catch (err) {
-        reject(err)
-      }
-    })
-  }
-
-  _destroy() {
-    return new Promise((resolve) => {
-      if (this.client) {
-        this.tdlib.td_json_client_destroy(this.client)
-        this.client = null
-      }
-      resolve()
-    })
-  }
 }
 
-module.exports = Client
+export default Client

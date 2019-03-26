@@ -1,10 +1,12 @@
 {
   "name": "tglib",
-  "version": "2.1.1",
+  "version": "3.0.0",
+  "author": "nodegin",
+  "license": "MIT",
   "description": "TDLib (Telegram Database library) bindings for Node.js",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "homepage": "https://github.com/nodegin/tglib#readme",
+  "bugs": {
+    "url": "https://github.com/nodegin/tglib/issues"
   },
   "repository": {
     "type": "git",
@@ -14,19 +16,30 @@
     "tdlib",
     "telegram"
   ],
-  "author": "nodegin",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/nodegin/tglib/issues"
+  "main": "node.js",
+  "module": "wasm.js",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "node test/test.js",
+    "pretest": "npm run build",
+    "prepublish": "npm run build"
   },
-  "homepage": "https://github.com/nodegin/tglib#readme",
   "dependencies": {
-    "crc": "^3.5.0",
-    "ffi-napi": "^2.4.3",
-    "fs-extra": "^6.0.1",
-    "inquirer": "^6.0.0",
-    "ref-napi": "^1.4.0"
+    "crc": "^3.8.0",
+    "ffi-napi": "^2.4.5",
+    "fs-extra": "^7.0.1",
+    "inquirer": "^6.2.2",
+    "ref-napi": "^1.4.1"
   },
+  "devDependencies": {
+    "rollup": "^1.0.0",
+    "rollup-plugin-json": "^4.0.0"
+  },
+  "files": [
+    "node.js",
+    "wasm.js"
+  ],
   "engines": {
     "node": ">= 9.0.0"
   }

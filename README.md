@@ -13,10 +13,160 @@ TDLib (Telegram Database library) bindings for Node.js
 
 -----
 
+### Node / WASM support
+
+tglib support both Node and WASM environments:
+
+```js
+// CommonJS, loads Node version tglib
+const { Client } = require('tglib')
+
+// ESModule, loads WASM version tglib
+import { Client } from 'tglib'
+```
+
+By default, `package.json` will automatically handle it for you.
+
+If use CommonJS (`require()` function, usally Node.js), it loads `require('tglib/node')`
+
+If use ESModule (`import` syntax, usally bundlers), it loads `import ... from 'tglib/wasm'`
+
+In case something misimported, you can manually set to the correct version you need:
+
+```js
+import { Client } from 'tglib/node'
+```
+
+-----
+
 ### Options
 
-- `dataDir`: Allows you to specify custom directory for your tglib user data. Defaults currect working directory.
-- `binaryPath`: Allows you to specify the path for TDLib binary. Defaults `libtdjson` in currect working directory.
+```js
+new Client({
+  apiId: '', // specify your API ID
+  apiHash: '', // specify your API Hash
+  verbosityLevel: 2, // specify TDLib verbosity level to control logging, default 2
+  tdlibParameters: {}, // specify custom tdlibParameters object
+
+  // Node only options
+  appDir: '', // specify where to place tglib files, default "__tglib__" folder
+  binaryPath: '', // specify the TDLib static binary path, default "libtdjson" in cwd
+
+  // WASM only options
+  wasmModule: null, // specify the WebAssembly module
+  filesDir: '', // specify the files directory path
+  databaseDir: '', // specify the database directory path
+})
+```
+
+-----
+
+#### Callbacks / Authorization
+
+You can register callbacks for the following events:
+
+- `td:update`, default empty function
+- `td:error`, default empty function
+- `td:getInput`, default console prompt in Node, exception in WASM
+
+```js
+// register callback for updates
+client.registerCallback('td:update', (update) => {
+  console.log('[update]', update)
+})
+
+// register callback for errors
+client.registerCallback('td:error', (error) => {
+  console.log('[error]', error)
+})
+```
+
+The `td:getInput` event can be configured to ask for user input.
+
+It also be used for the authorization flow too.
+
+You MUST register an `async` function or a function that returns a `Promise`.
+
+To authorize a bot:
+
+```js
+// Save tglib default handler which prompt input at console
+const defaultHandler = client.callbacks['td:getInput']
+
+// Register own callback for returning auth details
+client.registerCallback('td:getInput', async (args) => {
+  if (args.string === 'tglib.input.AuthorizationType') {
+    return 'bot'
+  } else if (args.string === 'tglib.input.AuthorizationValue') {
+    return 'YOUR_BOT_TOKEN'
+  }
+  return await defaultHandler(args)
+})
+```
+
+To authorize an user:
+
+```js
+// Save tglib default handler which prompt input at console
+const defaultHandler = client.callbacks['td:getInput']
+
+// Register own callback for returning auth details
+client.registerCallback('td:getInput', async (args) => {
+  if (args.string === 'tglib.input.AuthorizationType') {
+    return 'user'
+  } else if (args.string === 'tglib.input.AuthorizationValue') {
+    return 'YOUR_INTERNATIONAL_PHONE_NUMBER'
+  }
+  return await defaultHandler(args)
+})
+```
+
+The `string` property in `td:getInput` argument object is used to determine what the input is:
+
+- `tglib.input.AuthorizationType`, authorization type: `user` or `bot`
+- `tglib.input.AuthorizationValue`, authorization value: bot token or phone number
+- `tglib.input.FirstName`, first name for new account creation
+- `tglib.input.AuthorizationCode`, authorization code received in Telegram or SMS
+- `tglib.input.AuthorizationCodeIncorrect`, authorization code re-input if wrong
+- `tglib.input.AuthorizationPassword`, authorization password (two-step verification)
+- `tglib.input.AuthorizationPasswordIncorrect`, authorization password re-input if wrong
+
+These string can be used as identifier for i18n purpose.
+
+An `extras` property may present in `td:getInput` argument object as well in some events.
+
+Currently, a `extras` property will come up with `hint` property in the following events:
+
+- `tglib.input.AuthorizationPassword`
+- `tglib.input.AuthorizationPasswordIncorrect`
+
+The `hint` property here indicates user cloud password hint.
+
+```js
+client.registerCallback('td:getInput', async ({ string, extras: { hint } = {} }) => {
+  const result = window.prompt(`${string}${hint ? ` ${hint}` : ''}`)
+  return result
+})
+```
+
+-----
+
+### Connect with Telegram
+
+tglib provide a `ready` Promise in client instances.
+
+This Promise will resolve automatically when the authentication flow finishes.
+
+In order words, when user successfully logged into their account, the Promise will be resolved.
+
+```js
+const client = new Client(...)
+
+await client.ready
+
+// You are now connected!
+await client.tg.sendTextMessage(...)
+```
 
 -----
 
@@ -26,66 +176,7 @@ tglib provide some useful methods that makes your Telegram app development easie
 
 Most API classes/methods can be found in the official [TDLib documentation](https://core.telegram.org/tdlib/docs/classes.html).
 
-#### Authorizing an user
-
-```js
-const client = new Client({
-  apiId: 'YOUR_API_ID',
-  apiHash: 'YOUR_API_HASH',
-  auth: {
-    type: 'user',
-    value: 'YOUR_PHONE_NUMBER',
-  },
-})
-```
-
-#### Authorizing a bot
-
-```js
-const client = new Client({
-  apiId: 'YOUR_API_ID',
-  apiHash: 'YOUR_API_HASH',
-  auth: {
-    type: 'bot',
-    value: 'YOUR_BOT_TOKEN',
-  },
-})
-```
-
 #### ![](https://placehold.it/12/efcf39/000?text=+) Low Level APIs
-
-
-##### `client.ready`
-
-
-This promise is used for initializing tglib client and connect with Telegram.
-
-```js
-await client.ready
-```
-
-
-##### `client.registerCallback(key, callback)` -> Void
-
-
-<details>
-<summary>Expand</summary>
-<p>
-
-This API is provided by tglib, you can use this API to register your function in order to receive callbacks.
-
-The authorization process can be overridden here by registering `td:getInput` callback.
-
-```js
-client.registerCallback('td:update', (update) => console.log(update))
-client.registerCallback('td:error', (error) => console.error(error))
-client.registerCallback('td:getInput', async (args) => {
-  const result = await getInputFromUser(args)
-  return result
-})
-```
-</p>
-</details>
 
 
 ##### `client._send(query)` -> Promise -> Object
@@ -342,9 +433,9 @@ const chat2 = await client.tg.getChat({ chat_id: '-12345678901234' })
 
 > [macOS](https://github.com/tdlib/td#macos)
 
-> [Linux - CentOS 7.5](https://github.com/nodegin/tglib/blob/master/examples/centos_75.sh)
+> [Linux - CentOS 7.5](https://gist.github.com/nodegin/e3849aa1e5170c2e05942ffe86e4f8c9)
 
-Note: building TDLib binary requires at least 8GB of memory, otherwise building process will fail. Building in a Docker container is recommended.
+Note: building TDLib binary requires at least 8GB of memory (or more...), otherwise building process will fail. Build in containers are recommended.
 
 -----
 

@@ -241,4 +241,4 @@ class TG {
   }
 }
 
-module.exports = TG
+export default TG
