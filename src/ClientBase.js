@@ -34,6 +34,7 @@ class Client {
     })
     this.client = null
     this.tg = new TG(this)
+    this.hijackers = {}
     this.fetching = {}
     this.callbacks = {
       'td:update': () => {},
@@ -58,21 +59,35 @@ class Client {
     }
     const update = await this._receive()
     if (update) {
-      switch (update['@type']) {
-        case 'updateAuthorizationState': {
-          await this.handleAuth(update)
-          break
+      if (this.hijackers[update['@type']]) {
+        // for tglib update hijacking
+        this.hijackers[update['@type']](update)
+      } else {
+        // handle update normally
+        switch (update['@type']) {
+          case 'updateAuthorizationState': {
+            await this.handleAuth(update)
+            break
+          }
+          case 'error': {
+            await this.handleError(update)
+            break
+          }
+          default:
+            await this.handleUpdate(update)
+            break
         }
-        case 'error': {
-          await this.handleError(update)
-          break
-        }
-        default:
-          await this.handleUpdate(update)
-          break
       }
     }
     setTimeout(() => this.loop(), 1)
+  }
+
+  _hijackUpdate(type, callback) {
+    if (typeof callback === 'function') {
+      this.hijackers[type] = callback
+    } else {
+      delete this.hijackers[type]
+    }
   }
 
   async handleAuth(update) {

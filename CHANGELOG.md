@@ -1,5 +1,9 @@
 ## Changelog
 
+#### tglib v3.0.1
+
+- Added a new high level API `client.tg.call`
+
 #### tglib v3.0.0
 
 WARNING: This release came with multiple breaking changes, please see README.md / examples for updated usages.

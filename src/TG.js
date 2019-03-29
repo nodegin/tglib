@@ -1,3 +1,5 @@
+import EventEmitter from 'event-emitter'
+
 // combine the user-supplied options with the referencing base options
 function combine(object, options, whitelistedKeys) {
   Object.keys(object).forEach((key) => {
@@ -238,6 +240,45 @@ class TG {
       throw new Error('Neither username nor chat_id were specified for method "getChat"')
     }
     return chat
+  }
+
+  /*
+   *  Call an user
+   */
+  call(userId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { id } = await this.client.fetch({
+          '@type': 'createCall',
+          'user_id': userId,
+          'protocol': {
+            '@type': 'callProtocol',
+            'udp_p2p': true,
+            'udp_reflector': true,
+            'min_layer': 65,
+            'max_layer': 65,
+          },
+        })
+        const emitter = EventEmitter()
+        this.client._hijackUpdate('updateCall', (update) => {
+          // If call failed due to USER_PRIVACY_RESTRICTED
+          if (update.call.state['@type'] === 'callStateError') {
+            this.client._hijackUpdate('updateCall', false)
+            return reject(update.call.state.error)
+          }
+          if (update.call.state['@type'] === 'callStateReady') {
+            emitter.emit('ready', update.call)
+          }
+          if (update.call.state['@type'] === 'callStateDiscarded') {
+            emitter.emit('discarded', update.call)
+            this.client._hijackUpdate('updateCall', false)
+          }
+          return resolve(emitter)
+        })
+      } catch (err) {
+        reject(err)
+      }
+    })
   }
 }
 

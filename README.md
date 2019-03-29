@@ -420,6 +420,28 @@ const chat2 = await client.tg.getChat({ chat_id: '-12345678901234' })
 </p>
 </details>
 
+
+##### `client.tg.call(userId)` -> Promise -> EventEmitter
+
+
+<details>
+<summary>Expand</summary>
+<p>
+
+This API is provided by tglib, you can use this API to call an user.
+
+The promise will resolve with an EventEmitter when call succceeded.
+
+The EventEmitter will emit `ready` and `discarded` events.
+
+```js
+const emitter = await client.tg.call(4000000001)
+emitter.on('ready', (call) => console.log(call))
+emitter.on('discarded', (call) => console.log(call))
+```
+</p>
+</details>
+
 -----
 
 ### Requirements

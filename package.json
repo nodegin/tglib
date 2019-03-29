@@ -1,6 +1,6 @@
 {
   "name": "tglib",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "author": "nodegin",
   "license": "MIT",
   "description": "TDLib (Telegram Database library) bindings for Node.js",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "crc": "^3.8.0",
+    "event-emitter": "^0.3.5",
     "ffi-napi": "^2.4.5",
     "fs-extra": "^7.0.1",
     "inquirer": "^6.2.2",
