@@ -17,16 +17,23 @@ class ClientWASM extends ClientBase {
         wasmModule,
       } = this.options
 
-      // See also: https://github.com/tdlib/td/blob/master/td/telegram/td_emscripten.cpp
+      // See also:
+      // https://github.com/tdlib/td/blob/master/td/telegram/td_emscripten.cpp
+      // https://github.com/tdlib/td/blob/master/example/web/tdweb/src/worker.js#L495
       this.tdlib = {
         td_create:        wasmModule.cwrap('td_create', 'number', []),
         td_send:          wasmModule.cwrap('td_send', null, ['number', 'string']),
         td_receive:       wasmModule.cwrap('td_receive', 'string', ['number']),
         td_execute:       wasmModule.cwrap('td_execute', 'string', ['number', 'string']),
         td_destroy:       wasmModule.cwrap('td_destroy', null, ['number']),
-        td_set_verbosity: wasmModule.cwrap('td_set_verbosity', null, ['number']),
       }
-      this.tdlib.td_set_verbosity(verbosityLevel)
+      this.tdlib.td_execute(
+        0,
+        JSON.stringify({
+          '@type': 'setLogVerbosityLevel',
+          new_verbosity_level: verbosityLevel,
+        })
+      )
 
       this.client = await this._create()
     } catch (error) {
