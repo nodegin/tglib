@@ -1,5 +1,5 @@
-import TextStruct from './TextStruct'
+import TextStruct from "./TextStruct";
 
 export {
-  TextStruct,
-}
+    TextStruct,
+};
