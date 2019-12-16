@@ -243,6 +243,29 @@ class TG {
   }
 
   /*
+   *  Download a file
+   */
+  async download(remoteFileId) {
+    const { id } = await this.client.fetch({
+      '@type': 'getRemoteFile',
+      'remote_file_id': remoteFileId,
+    })
+    let file = await this.client.fetch({
+      '@type': 'downloadFile',
+      'file_id': id,
+      'priority': 1,
+    })
+    if (!file['local']['path'].length) {
+      const downloadPromise = new Promise((resolve) => {
+        this.client.downloading[id] = resolve
+      })
+      file = await downloadPromise
+    }
+    return file
+  }
+
+
+  /*
    *  Call an user
    */
   call(userId) {

@@ -1,5 +1,11 @@
 ## Changelog
 
+#### tglib v3.0.3
+
+- Added a new high level API `client.tg.download` for downloading files
+
+-----
+
 #### tglib v3.0.2
 
 - Fix WASM verbosity setting for TDLib 1.4.0 (provides official WASM suppor & example)

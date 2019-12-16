@@ -35,6 +35,7 @@ class Client {
     this.client = null
     this.tg = new TG(this)
     this.hijackers = {}
+    this.downloading = {}
     this.fetching = {}
     this.callbacks = {
       'td:update': () => {},
@@ -213,6 +214,20 @@ class Client {
       return
     }
     switch (update['@type']) {
+      case 'updateFile': {
+        const fileId = update['file']['id']
+        if (!this.downloading[fileId]) {
+          // default handle
+          this.callbacks['td:update'].call(null, update)
+          return
+        }
+        if (!update['file']['local']['path'].length) {
+          // not yet downloaded
+          return
+        }
+        // resolve downloaded
+        this.downloading[fileId](update)
+      }
       case 'updateOption': {
         if (update['name'] === 'my_id' && update['value']['@type'] === 'optionValueEmpty') {
           // session has been signed out
