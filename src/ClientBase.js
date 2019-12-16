@@ -226,7 +226,7 @@ class Client {
           return
         }
         // resolve downloaded
-        this.downloading[fileId](update)
+        this.downloading[fileId](update['file'])
       }
       case 'updateOption': {
         if (update['name'] === 'my_id' && update['value']['@type'] === 'optionValueEmpty') {
