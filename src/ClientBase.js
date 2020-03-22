@@ -133,16 +133,19 @@ class Client {
       }
       case 'authorizationStateWaitCode': {
         const payload = { '@type': 'checkAuthenticationCode' }
-        if (!update['authorization_state']['is_registered']) {
-          console.log(`User ${value} has not yet been registered with Telegram`)
-          payload['first_name'] = await this.callbacks['td:getInput']({
-            string: 'tglib.input.FirstName',
-          })
-        }
         payload['code'] = await this.callbacks['td:getInput']({
           string: 'tglib.input.AuthorizationCode',
         })
         this._send(payload)
+        break
+      }
+      case 'authorizationStateWaitRegistration': {
+        const payload = { '@type': 'registerUser' };
+        console.log(`User has not yet been registered with Telegram`);
+        payload['first_name'] = await this.callbacks['td:getInput']({
+          string: 'tglib.input.FirstName',
+        });
+        this._send(payload);
         break
       }
       case 'authorizationStateWaitPassword': {
